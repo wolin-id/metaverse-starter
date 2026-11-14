@@ -1,6 +1,6 @@
 import { Grid, OrbitControls } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
-import { type ReactElement, useCallback, useState } from 'react';
+import { type ReactElement, useCallback, useEffect, useState } from 'react';
 import {
   MediaStageScreen,
   type ViewableImpressionPayload,
@@ -10,13 +10,28 @@ import {
   WolinAuthProvider,
 } from './blocks';
 
-const DEFAULT_STAGE_URL = 'https://www.youtube.com/watch?v=jfKfPfyJRdk';
+const DEFAULT_STAGE_URL = 'https://www.youtube.com/watch?v=aqz-KE-bpKQ';
 
 export function App(): ReactElement {
   const [liveUrl, setLiveUrl] = useState<string>(DEFAULT_STAGE_URL);
   const [urlDraft, setUrlDraft] = useState<string>(DEFAULT_STAGE_URL);
   const [showOccluderWall, setShowOccluderWall] = useState<boolean>(false);
   const [impressions, setImpressions] = useState<ViewableImpressionPayload[]>([]);
+  const [hudExpanded, setHudExpanded] = useState<boolean>(() =>
+    typeof window === 'undefined' ? true : window.innerWidth >= 640,
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mql = window.matchMedia('(max-width: 639px)');
+    const syncViewport = (matchesMobile: boolean) => {
+      setHudExpanded(!matchesMobile);
+    };
+    syncViewport(mql.matches);
+    const handler = (e: MediaQueryListEvent) => syncViewport(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
 
   const handleImpression = useCallback((payload: ViewableImpressionPayload) => {
     setImpressions((prev) => [payload, ...prev].slice(0, 5));
@@ -29,6 +44,7 @@ export function App(): ReactElement {
         <div className="canvas-layer">
           <Canvas
             shadows
+            gl={{ preserveDrawingBuffer: true, antialias: true }}
             camera={{ position: [0, 3.2, 6.8], fov: 50, near: 0.1, far: 120 }}
             dpr={[1, 2]}
           >
@@ -117,68 +133,83 @@ export function App(): ReactElement {
               <h1>Wolin Metaverse Starter</h1>
               <p>4 Sovereign Spatial Lego Blocks · React 19 + R3F</p>
             </div>
-            <a
-              href="/client-id.jsonld"
-              target="_blank"
-              rel="noreferrer"
-              className="hud-badge-link"
-              title="Inspect Solid-OIDC Client ID Document (Block 04)"
-            >
-              Block 04 · client-id.jsonld ↗
-            </a>
-          </header>
-
-          <WolinAuthPanel />
-
-          <section className="hud-card" aria-label="Stage Broadcast Controls">
-            <div className="hud-card-header">
-              <span className="hud-badge">Block 02 · Live Stage & P2P Voice</span>
-            </div>
-            <form
-              className="inline-form"
-              onSubmit={(e) => {
-                e.preventDefault();
-                setLiveUrl(urlDraft);
-              }}
-            >
-              <input
-                type="url"
-                value={urlDraft}
-                onChange={(e) => setUrlDraft(e.target.value)}
-                placeholder="YouTube or CHZZK Live URL"
-                aria-label="Broadcast Stream URL"
-              />
-              <button type="submit" className="secondary-btn">
-                Load
-              </button>
-            </form>
-          </section>
-
-          <section className="hud-card" aria-label="Spatial Ad Viewability Inspector">
-            <div className="hud-card-header">
-              <span className="hud-badge">Block 03 · Zero-PII Spatial AdSlot</span>
+            <div className="hud-header-actions">
+              <a
+                href="/client-id.jsonld"
+                target="_blank"
+                rel="noreferrer"
+                className="hud-badge-link"
+                title="Inspect Solid-OIDC Client ID Document (Block 04)"
+              >
+                client-id ↗
+              </a>
               <button
                 type="button"
-                className={`chip-btn ${showOccluderWall ? 'active' : ''}`}
-                onClick={() => setShowOccluderWall((v) => !v)}
+                className="chip-btn hud-collapse-btn"
+                aria-expanded={hudExpanded}
+                onClick={() => setHudExpanded((v) => !v)}
               >
-                {showOccluderWall ? 'Remove Wall' : 'Test Occluder Wall'}
+                {hudExpanded ? 'Hide HUD' : 'Blocks ▾'}
               </button>
             </div>
-            <p className="hud-copy">
-              Orbit toward the right billboard (&ge;5% screen area, unobstructed raycast, 1.5s
-              continuous gaze) to trigger a verified Zero-PII impression.
-            </p>
-            {impressions.length > 0 && (
-              <div className="impression-log" role="status">
-                <strong>Verified Impressions ({impressions.length})</strong>
-                <span>
-                  {impressions[0]!.slotId} · {(impressions[0]!.screenAreaRatio * 100).toFixed(1)}%
-                  area · {impressions[0]!.dwellMs}ms
-                </span>
-              </div>
-            )}
-          </section>
+          </header>
+
+          {hudExpanded && (
+            <>
+              <WolinAuthPanel />
+
+              <section className="hud-card" aria-label="Stage Broadcast Controls">
+                <div className="hud-card-header">
+                  <span className="hud-badge">Block 02 · Live Stage & P2P Voice</span>
+                </div>
+                <form
+                  className="inline-form"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    setLiveUrl(urlDraft);
+                  }}
+                >
+                  <input
+                    type="url"
+                    value={urlDraft}
+                    onChange={(e) => setUrlDraft(e.target.value)}
+                    placeholder="YouTube or CHZZK Live URL"
+                    aria-label="Broadcast Stream URL"
+                  />
+                  <button type="submit" className="secondary-btn">
+                    Load
+                  </button>
+                </form>
+              </section>
+
+              <section className="hud-card" aria-label="Spatial Ad Viewability Inspector">
+                <div className="hud-card-header">
+                  <span className="hud-badge">Block 03 · Zero-PII Spatial AdSlot</span>
+                  <button
+                    type="button"
+                    className={`chip-btn ${showOccluderWall ? 'active' : ''}`}
+                    onClick={() => setShowOccluderWall((v) => !v)}
+                  >
+                    {showOccluderWall ? 'Remove Wall' : 'Test Occluder Wall'}
+                  </button>
+                </div>
+                <p className="hud-copy">
+                  Orbit toward the right billboard (&ge;5% screen area, unobstructed raycast, 1.5s
+                  continuous gaze) to trigger a verified Zero-PII impression.
+                </p>
+                {impressions.length > 0 && (
+                  <div className="impression-log" role="status">
+                    <strong>Verified Impressions ({impressions.length})</strong>
+                    <span>
+                      {impressions[0]!.slotId} ·{' '}
+                      {(impressions[0]!.screenAreaRatio * 100).toFixed(1)}% area ·{' '}
+                      {impressions[0]!.dwellMs}ms
+                    </span>
+                  </div>
+                )}
+              </section>
+            </>
+          )}
         </aside>
       </div>
     </WolinAuthProvider>

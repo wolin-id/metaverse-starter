@@ -692,7 +692,10 @@ export function sanitizeHttpAssetUrl(raw: string | undefined): string | undefine
   if (!raw) return undefined;
   try {
     const parsed = new URL(raw.trim());
-    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return undefined;
+    const isLocalHttp =
+      parsed.protocol === 'http:' &&
+      (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1');
+    if (parsed.protocol !== 'https:' && !isLocalHttp) return undefined;
     if (parsed.username || parsed.password) return undefined;
     return parsed.toString();
   } catch {

@@ -305,7 +305,7 @@ export function MediaStageScreen({
                     type="button"
                     className="stage-preset-btn"
                     onClick={() =>
-                      onLiveUrlChange('https://www.youtube.com/watch?v=jfKfPfyJRdk')
+                      onLiveUrlChange('https://www.youtube.com/watch?v=aqz-KE-bpKQ')
                     }
                   >
                     YouTube

@@ -22,7 +22,7 @@ export interface SpatialAdCreative {
 export const DEFAULT_HOUSE_AD: SpatialAdCreative = {
   adId: 'house-wolin-passport-v1',
   headline: 'WOLIN PASSPORT',
-  subline: 'One Identity. Infinite Worlds. Claim {handle}.wolin.id',
+  subline: 'One Identity. Infinite Worlds.\nClaim {handle}.wolin.id',
   ctaLabel: 'wolin.id',
   destinationUrl: 'https://wolin.id',
   accentColor: '#38bdf8',
@@ -422,20 +422,23 @@ function createHouseAdTexture(creative: SpatialAdCreative): THREE.CanvasTexture 
 
   // Headline
   ctx.fillStyle = '#f8fafc';
-  ctx.font = '800 68px system-ui, -apple-system, sans-serif';
-  ctx.fillText(creative.headline, 64, 210);
+  ctx.font = '800 62px system-ui, -apple-system, sans-serif';
+  ctx.fillText(creative.headline, 64, 196, 650);
 
-  // Subline
-  ctx.fillStyle = '#cbd5e1';
-  ctx.font = '500 32px system-ui, -apple-system, sans-serif';
-  ctx.fillText(creative.subline, 64, 282);
+  // Subline (multi-line safe within left 650px column so it never collides with moon emblem)
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '500 30px system-ui, -apple-system, sans-serif';
+  const subLines = creative.subline.split('\n');
+  subLines.forEach((line, idx) => {
+    ctx.fillText(line, 64, 256 + idx * 42, 650);
+  });
 
   // CTA Pill
   ctx.fillStyle = accent;
-  ctx.fillRect(64, 352, 260, 68);
+  ctx.fillRect(64, 356, 260, 68);
   ctx.fillStyle = '#090d16';
   ctx.font = '800 28px system-ui, -apple-system, sans-serif';
-  ctx.fillText(`Visit ${creative.ctaLabel} ↗`, 92, 396);
+  ctx.fillText(`Visit ${creative.ctaLabel} ↗`, 92, 400);
 
   // Crescent Moon Emblem
   ctx.beginPath();

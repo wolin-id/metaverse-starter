@@ -72,9 +72,16 @@ body,
 
 .hud-brand {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
+}
+
+.hud-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .hud-brand h1 {
@@ -185,11 +192,16 @@ body,
   min-width: 0;
   padding: 7px 10px;
   border-radius: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.92);
   color: var(--text-primary);
   font-size: 12px;
   user-select: text;
+}
+
+.inline-form input::placeholder {
+  color: #cbd5e1;
+  opacity: 0.78;
 }
 
 button {
@@ -373,10 +385,11 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 5px 11px;
   border-radius: 999px;
-  background: rgba(9, 13, 22, 0.88);
-  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(6, 9, 17, 0.94);
+  border: 1px solid rgba(203, 213, 225, 0.55);
+  color: #f8fafc;
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;

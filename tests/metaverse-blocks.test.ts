@@ -11,6 +11,7 @@ import {
   decodeJwtPayload,
   generateDPoPKeyPair,
   parseWebIdProfile,
+  sanitizeHttpAssetUrl,
   signDPoPProof,
   WOLIN_NS,
 } from '../src/wolin/client';
@@ -53,6 +54,10 @@ describe('Wolin Metaverse Starter — 4 Lego Blocks Verification', () => {
     const sandbox = await createSandboxPassportSession();
     expect(sandbox.session.handle).toBe('luna.wolin.id');
     expect(sandbox.session.tokenType).toBe('DPoP');
+    expect(sanitizeHttpAssetUrl('http://insecure.example.com/avatar.glb')).toBeUndefined();
+    expect(sanitizeHttpAssetUrl('https://cdn.wolin.id/avatar.glb')).toBe(
+      'https://cdn.wolin.id/avatar.glb',
+    );
   });
 
   it('Block 2: parses YouTube Live and CHZZK Live broadcast URLs safely', () => {
