@@ -1,0 +1,35 @@
+{
+  "name": "@wolin-id/metaverse-starter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Wolin Metaverse Starter — 4 Sovereign 3D Lego Blocks (Solid-OIDC Passwordless Auth + Avatar, YouTube/CHZZK Media Stage + P2P Voice, Zero-PII 3D Spatial AdSlot, Client ID Document) on React 19, Vite 6, and React Three Fiber.",
+  "type": "module",
+  "license": "MIT OR Apache-2.0",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "^9.8.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "three": "^0.175.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@types/three": "^0.175.0",
+    "@vitejs/plugin-react": "^4.4.1",
+    "typescript": "~5.8.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.1.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

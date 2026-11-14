@@ -1,0 +1,394 @@
+:root {
+  color-scheme: dark;
+  --bg-obsidian: #060911;
+  --panel-bg: rgba(11, 16, 29, 0.84);
+  --panel-border: rgba(148, 163, 184, 0.2);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --accent-cyan: #38bdf8;
+  --accent-emerald: #34d399;
+  --accent-amber: #f59e0b;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-obsidian);
+  color: var(--text-primary);
+  touch-action: none;
+  overscroll-behavior: none;
+  user-select: none;
+}
+
+.app-viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Isolated stacking context traps 3D Html z-index layers underneath HUD */
+.canvas-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.hud-dock {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 9999;
+  width: min(360px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.hud-brand,
+.hud-card {
+  background: var(--panel-bg);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.42);
+}
+
+.hud-brand {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hud-brand h1 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.hud-brand p {
+  margin: 3px 0 0;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+.hud-badge,
+.hud-badge-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: rgba(56, 189, 248, 0.14);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.hud-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.hud-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hud-copy {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.hud-status {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  color: var(--accent-cyan);
+}
+
+.passport-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.passport-avatar-monogram {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 15px;
+  background: linear-gradient(135deg, #38bdf8, #6366f1);
+  color: #060911;
+}
+
+.passport-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.passport-meta strong {
+  font-size: 13px;
+}
+
+.passport-meta span {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+.preset-row {
+  display: flex;
+  gap: 6px;
+}
+
+.inline-form {
+  display: flex;
+  gap: 6px;
+}
+
+.inline-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.85);
+  color: var(--text-primary);
+  font-size: 12px;
+  user-select: text;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.primary-btn {
+  padding: 8px 12px;
+  border-radius: 9px;
+  border: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #e2e8f0, #94a3b8);
+  color: #060911;
+}
+
+.secondary-btn,
+.chip-btn,
+.stage-preset-btn,
+.stage-voice-btn {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(30, 41, 59, 0.72);
+  color: var(--text-primary);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.chip-btn.active,
+.stage-voice-btn.active {
+  border-color: var(--accent-emerald);
+  background: rgba(52, 211, 153, 0.18);
+  color: var(--accent-emerald);
+}
+
+.hud-link-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  padding: 2px 4px;
+}
+
+.impression-log {
+  margin-top: 8px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.32);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+}
+
+.impression-log strong {
+  color: var(--accent-emerald);
+}
+
+/* 3D Overhead Avatar Nameplate */
+.wolin-avatar-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(9, 13, 22, 0.86);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.wolin-avatar-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-emerald);
+}
+
+.wolin-avatar-dot[data-guest='true'] {
+  background: var(--accent-amber);
+}
+
+.wolin-avatar-name {
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.wolin-avatar-handle {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+/* 3D Media Stage Screen */
+.stage-screen-shell {
+  width: 580px;
+  height: 336px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #090d16;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  display: flex;
+  flex-direction: column;
+}
+
+.stage-screen-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  background: #0f172a;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.stage-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.stage-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.85);
+}
+
+.stage-live-dot[data-platform='chzzk'] {
+  background: #00ffa3;
+  box-shadow: 0 0 8px rgba(0, 255, 163, 0.85);
+}
+
+.stage-title {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.stage-sub {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.stage-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.stage-iframe-box {
+  flex: 1;
+  position: relative;
+  background: #020617;
+}
+
+.stage-iframe-box iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.stage-empty-fallback {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+/* 3D AdSlot Viewability Pill */
+.ad-telemetry-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(9, 13, 22, 0.88);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.ad-telemetry-pill[data-verified='true'] {
+  border-color: var(--accent-emerald);
+  color: var(--accent-emerald);
+}
+
+.ad-telemetry-pill[data-occluded='true'] {
+  border-color: var(--accent-amber);
+  color: var(--accent-amber);
+}
