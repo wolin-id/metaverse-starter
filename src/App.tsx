@@ -217,6 +217,7 @@ function SanctuaryExperience(): ReactElement {
             <PortalScreenProjector
               portals={portals}
               labelRefs={portalLabelRefs}
+              hidden={isMeditating}
               yOffset={1.26}
               edgePaddingPx={8}
             />
