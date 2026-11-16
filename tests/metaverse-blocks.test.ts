@@ -6,6 +6,12 @@ import {
   parseStageMediaUrl,
 } from '../src/blocks';
 import {
+  buildSanctuaryPortals,
+  CANONICAL_MOON_PORTALS,
+} from '../src/scene/MoonPortals';
+import { createMeditationAudioController } from '../src/scene/meditationAudio';
+import { createDriftingLotusLantern } from '../src/scene/WolinSanctuary';
+import {
   createSandboxPassportSession,
   createSolidAuthRequest,
   DEFAULT_WOLIN_ISSUER,
@@ -13,7 +19,9 @@ import {
   decodeJwtPayload,
   generateDPoPKeyPair,
   isValidPodId,
+  JARVIS_PASSPORT_PRESET,
   parseWebIdProfile,
+  SANDBOX_PASSPORT_PRESETS,
   sanitizeHttpAssetUrl,
   signDPoPProof,
   WolinClient,
@@ -199,5 +207,53 @@ describe('Wolin Metaverse Starter — 4 Lego Blocks Verification', () => {
     }
     expect(triggeredCount).toBe(1);
     expect(state.hasFiredImpression).toBe(true);
+  });
+
+  it('Sanctuary: boots Jarvis pioneer passport, builds 4 canonical Moon Portals, and appends sanitized Pod wolin:worldLinks', async () => {
+    expect(SANDBOX_PASSPORT_PRESETS[0]?.handle).toBe('jarvis');
+    const jarvis = await createSandboxPassportSession(JARVIS_PASSPORT_PRESET);
+    expect(jarvis.session.webId).toBe('https://jarvis.wolin.id/profile/card#me');
+    expect(jarvis.session.handle).toBe('jarvis.wolin.id');
+    expect(jarvis.session.displayName).toBe('Jarvis');
+
+    // Canonical 4 portals deduplicate Jarvis's own passport link so default count stays 4
+    expect(CANONICAL_MOON_PORTALS).toHaveLength(4);
+    expect(CANONICAL_MOON_PORTALS.map((p) => p.url)).toEqual([
+      'https://auth.wolin.id/passport/jarvis',
+      'https://topdoli.com/',
+      'https://meemora.co/madang/',
+      'https://zzazzbar.com/',
+    ]);
+
+    const jarvisPortals = buildSanctuaryPortals(jarvis.session.worldLinks);
+    expect(jarvisPortals).toHaveLength(4);
+
+    // Custom HTTPS wolin:worldLinks dynamically spawn Moon 05+ while filtering unsafe URLs
+    const customPortals = buildSanctuaryPortals([
+      'https://auth.wolin.id/passport/jarvis', // duplicate of Moon 01
+      'http://insecure.world.example/', // rejected (non-HTTPS external)
+      'javascript:alert(1)', // rejected
+      'https://cycorld.com/sanctuary',
+    ]);
+    expect(customPortals).toHaveLength(5);
+    expect(customPortals[4]?.code).toBe('Moon 05');
+    expect(customPortals[4]?.url).toBe('https://cycorld.com/sanctuary');
+    expect(customPortals[4]?.isCustomPodLink).toBe(true);
+  });
+
+  it('Sanctuary Micro-Interactions: spawns outward-drifting lotus lanterns and safe headless singing-bowl audio controller', () => {
+    const lantern = createDriftingLotusLantern(4, [0, 4.2], 12.5);
+    expect(lantern.id).toContain('lotus-lantern-4');
+    expect(Math.hypot(lantern.driftVx, lantern.driftVz)).toBeGreaterThan(0.05);
+
+    const audio = createMeditationAudioController();
+    expect(audio.isRunning()).toBe(false);
+    audio.start();
+    expect(audio.isRunning()).toBe(true);
+    audio.setMuted(true);
+    expect(audio.isMuted()).toBe(true);
+    audio.stop();
+    expect(audio.isRunning()).toBe(false);
+    audio.dispose();
   });
 });

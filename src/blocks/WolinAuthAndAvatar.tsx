@@ -51,6 +51,7 @@ export interface WolinAuthContextValue {
   loginSandboxPreset: (preset?: SandboxPassportPreset) => Promise<void>;
   loadPublicWebId: (webId: string) => Promise<void>;
   setCustomAvatarGlbUrl: (glbUrl: string) => void;
+  addCustomWorldLink: (worldUrl: string) => void;
   logout: () => void;
 }
 
@@ -255,6 +256,23 @@ export function WolinAuthProvider({
     );
   }, []);
 
+  const addCustomWorldLink = useCallback((worldUrl: string) => {
+    const clean = sanitizeHttpAssetUrl(worldUrl);
+    if (!clean) {
+      setStatusMessage('Please enter a valid https:// world URL.');
+      return;
+    }
+    setSession((prev) => {
+      if (!prev) return prev;
+      if (prev.worldLinks.includes(clean)) return prev;
+      return {
+        ...prev,
+        worldLinks: [...prev.worldLinks, clean],
+      };
+    });
+    setStatusMessage(`Added wolin:worldLinks portal → ${clean}`);
+  }, []);
+
   const logout = useCallback(() => {
     setSession(null);
     setProfile(null);
@@ -271,6 +289,7 @@ export function WolinAuthProvider({
       loginSandboxPreset,
       loadPublicWebId,
       setCustomAvatarGlbUrl,
+      addCustomWorldLink,
       logout,
     }),
     [
@@ -282,6 +301,7 @@ export function WolinAuthProvider({
       loginSandboxPreset,
       loadPublicWebId,
       setCustomAvatarGlbUrl,
+      addCustomWorldLink,
       logout,
     ],
   );
@@ -304,6 +324,8 @@ function resolveThemePalette(theme?: string): {
   visor: string;
 } {
   switch (theme) {
+    case 'bodhi-gold':
+      return { primary: '#132e32', accent: '#f5d08a', visor: '#fde68a' };
     case 'obsidian-cyan':
       return { primary: '#1e293b', accent: '#22d3ee', visor: '#67e8f9' };
     case 'aurora-violet':
