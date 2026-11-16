@@ -325,13 +325,13 @@ function resolveThemePalette(theme?: string): {
 } {
   switch (theme) {
     case 'bodhi-gold':
-      return { primary: '#132e32', accent: '#f5d08a', visor: '#fde68a' };
+      return { primary: '#064e3b', accent: '#F5F2EB', visor: '#10B981' };
     case 'obsidian-cyan':
       return { primary: '#1e293b', accent: '#22d3ee', visor: '#67e8f9' };
     case 'aurora-violet':
       return { primary: '#2e1065', accent: '#a855f7', visor: '#e879f9' };
     default:
-      return { primary: '#18181b', accent: '#cbd5e1', visor: '#38bdf8' };
+      return { primary: '#131924', accent: '#F5F2EB', visor: '#10B981' };
   }
 }
 

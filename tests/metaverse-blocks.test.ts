@@ -10,7 +10,16 @@ import {
   CANONICAL_MOON_PORTALS,
 } from '../src/scene/MoonPortals';
 import { createMeditationAudioController } from '../src/scene/meditationAudio';
-import { createDriftingLotusLantern } from '../src/scene/WolinSanctuary';
+import {
+  clampOutsideIsland,
+  computeLotusLanternWorldPosition,
+  createDriftingLotusLantern,
+  createJoseonMoonJarProfilePoints,
+  getSanctuaryMoodPalette,
+  INITIAL_LOTUS_LANTERNS,
+  MAX_LANTERN_WISH_LENGTH,
+  normalizeLanternWish,
+} from '../src/scene/WolinSanctuary';
 import {
   createSandboxPassportSession,
   createSolidAuthRequest,
@@ -239,12 +248,15 @@ describe('Wolin Metaverse Starter — 4 Lego Blocks Verification', () => {
     expect(customPortals[4]?.code).toBe('Moon 05');
     expect(customPortals[4]?.url).toBe('https://cycorld.com/sanctuary');
     expect(customPortals[4]?.isCustomPodLink).toBe(true);
+    expect(customPortals[4]?.accentColor).toBe('#10B981');
+    expect(customPortals[4]?.glowColor).toBe('#059669');
   });
 
   it('Sanctuary Micro-Interactions: spawns outward-drifting lotus lanterns and safe headless singing-bowl audio controller', () => {
     const lantern = createDriftingLotusLantern(4, [0, 4.2], 12.5);
     expect(lantern.id).toContain('lotus-lantern-4');
     expect(Math.hypot(lantern.driftVx, lantern.driftVz)).toBeGreaterThan(0.05);
+    expect(lantern.wish.length).toBeGreaterThan(0);
 
     const audio = createMeditationAudioController();
     expect(audio.isRunning()).toBe(false);
@@ -255,5 +267,64 @@ describe('Wolin Metaverse Starter — 4 Lego Blocks Verification', () => {
     audio.stop();
     expect(audio.isRunning()).toBe(false);
     audio.dispose();
+  });
+
+  it('Sanctuary V2 Wish Lanterns: normalizes 1-line wishes (maxLength=48), defaults poetic wishes, and computes safe lake drift', () => {
+    expect(INITIAL_LOTUS_LANTERNS).toHaveLength(3);
+    for (const seed of INITIAL_LOTUS_LANTERNS) {
+      expect(seed.wish.length).toBeGreaterThan(0);
+      expect(seed.authorHandle).toContain('.wolin.id');
+    }
+
+    // Blank input falls back to poetic wish
+    const fallbackWish = normalizeLanternWish('   \n\t  ', 0);
+    expect(fallbackWish).toContain('月印千江');
+
+    // Multiline + overlong Korean wish is collapsed to 1 line and capped at 48 characters
+    const longInput = '달빛 호수 위에 띄우는 소원\n두 번째 줄도 한 줄로 합쳐지고 마흔여덟 글자를 넘지 않게 정제됩니다 ✨🌸🪷';
+    const normalized = normalizeLanternWish(longInput, 1);
+    expect(normalized).not.toContain('\n');
+    expect(Array.from(normalized).length).toBe(MAX_LANTERN_WISH_LENGTH);
+
+    const customLantern = createDriftingLotusLantern(7, [1.2, 4.6], 10, {
+      wish: '우리 모두의 달항아리에 푸른 이끼가 자라기를',
+      authorHandle: 'jarvis.wolin.id',
+    });
+    expect(customLantern.wish).toBe('우리 모두의 달항아리에 푸른 이끼가 자라기를');
+    expect(customLantern.authorHandle).toBe('jarvis.wolin.id');
+
+    const [x0, y0, z0] = computeLotusLanternWorldPosition(customLantern, 10);
+    const [x1, _y1, z1] = computeLotusLanternWorldPosition(customLantern, 28);
+    expect(y0).toBeGreaterThan(0.02);
+    expect(Math.hypot(x1 - x0, z1 - z0)).toBeGreaterThan(0.5);
+    // Remains outside Bodhi island stone perimeter (center [0, -2.2], radius >= 3.9)
+    expect(Math.hypot(x1 - 0, z1 - -2.2)).toBeGreaterThanOrEqual(3.89);
+  });
+
+  it('Sanctuary V2 Moon Jar, Night/Dawn Mood & Lake Click Clamping: enforces SSOT colors, Dalhangari silhouette, and walkable water bounds', () => {
+    const night = getSanctuaryMoodPalette('night');
+    const dawn = getSanctuaryMoodPalette('dawn');
+    expect(night.backgroundHex).toBe('#090D16');
+    expect(night.moonTintHex).toBe('#F5F2EB');
+    expect(dawn.backgroundHex).not.toBe(night.backgroundHex);
+    expect(dawn.mainLightIntensity).toBeGreaterThan(night.mainLightIntensity);
+    expect(dawn.starCount).toBeLessThan(night.starCount);
+
+    // Joseon Moon Jar lathe profile swells wider at equatorial belly than foot and rim
+    const profile = createJoseonMoonJarProfilePoints();
+    expect(profile.length).toBeGreaterThanOrEqual(12);
+    const footR = profile[1]!.x;
+    const maxBellyR = Math.max(...profile.map((p) => p.x));
+    const topRimR = profile[profile.length - 3]!.x;
+    expect(maxBellyR).toBeGreaterThan(footR * 1.8);
+    expect(maxBellyR).toBeGreaterThan(topRimR * 1.8);
+
+    // Clicking directly on Bodhi island ([0, -2.2]) clamps gracefully to shallow shoreline
+    const [shoreX, shoreZ] = clampOutsideIsland(0, -2.2);
+    expect(Math.hypot(shoreX - 0, shoreZ - -2.2)).toBeCloseTo(3.45, 2);
+
+    // Clicking far beyond outer horizon clamps to walkable mirror lake radius (18.5m)
+    const [outerX, outerZ] = clampOutsideIsland(30, 40);
+    expect(Math.hypot(outerX, outerZ)).toBeCloseTo(18.5, 2);
   });
 });
