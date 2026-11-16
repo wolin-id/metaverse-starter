@@ -8,18 +8,30 @@ import {
 import {
   createSandboxPassportSession,
   createSolidAuthRequest,
+  DEFAULT_WOLIN_ISSUER,
+  DEFAULT_WOLIN_POD_BASE_URL,
   decodeJwtPayload,
   generateDPoPKeyPair,
+  isValidPodId,
   parseWebIdProfile,
   sanitizeHttpAssetUrl,
   signDPoPProof,
+  WolinClient,
   WOLIN_NS,
 } from '../src/wolin/client';
 
 describe('Wolin Metaverse Starter — 4 Lego Blocks Verification', () => {
-  it('Block 1: generates PKCE S256 + ES256 DPoP proofs and discovers https://wolin.id/ns#avatarGlbUrl', async () => {
+  it('Block 1: generates PKCE S256 + ES256 DPoP proofs, validates pod_id, follows 302 signed asset redirects safely, and discovers https://wolin.id/ns#avatarGlbUrl', async () => {
+    expect(DEFAULT_WOLIN_ISSUER).toBe('https://auth.wolin.id');
+    expect(DEFAULT_WOLIN_POD_BASE_URL).toBe('https://pod.wolin.id');
+    expect(isValidPodId('alice')).toBe(true);
+    expect(isValidPodId('luna')).toBe(true);
+    expect(isValidPodId('xn--bad')).toBe(false);
+    expect(isValidPodId('bad--handle')).toBe(false);
+    expect(isValidPodId('auth')).toBe(false);
+
     const authReq = await createSolidAuthRequest({
-      authorizationEndpoint: 'https://id.wolin.id/authorize',
+      authorizationEndpoint: 'https://auth.wolin.id/authorize',
       clientId: 'https://world.example.com/client-id.jsonld',
       redirectUri: 'https://world.example.com/',
     });
@@ -30,11 +42,11 @@ describe('Wolin Metaverse Starter — 4 Lego Blocks Verification', () => {
     const proof = await signDPoPProof({
       keyPair,
       htm: 'GET',
-      htu: 'https://luna.wolin.id/profile/card#me',
+      htu: 'https://alice.wolin.id/profile/card#me',
     });
     const claims = decodeJwtPayload(proof);
     expect(claims.htm).toBe('GET');
-    expect(claims.htu).toBe('https://luna.wolin.id/profile/card');
+    expect(claims.htu).toBe('https://alice.wolin.id/profile/card');
 
     const turtle = `
       @prefix foaf: <http://xmlns.com/foaf/0.1/> .
@@ -42,22 +54,57 @@ describe('Wolin Metaverse Starter — 4 Lego Blocks Verification', () => {
       @prefix wolin: <${WOLIN_NS}> .
       <#me>
         foaf:name "Luna Explorer" ;
-        solid:oidcIssuer <https://id.wolin.id> ;
+        solid:oidcIssuer <https://auth.wolin.id> ;
         wolin:avatarGlbUrl <https://cdn.wolin.id/avatars/luna.glb> ;
         wolin:passportTheme "obsidian-cyan" .
     `;
     const profile = parseWebIdProfile(turtle, 'https://luna.wolin.id/profile/card#me');
     expect(profile.name).toBe('Luna Explorer');
+    expect(profile.primaryOidcIssuer).toBe('https://auth.wolin.id');
     expect(profile.avatarGlbUrl).toBe('https://cdn.wolin.id/avatars/luna.glb');
     expect(profile.passportTheme).toBe('obsidian-cyan');
 
     const sandbox = await createSandboxPassportSession();
     expect(sandbox.session.handle).toBe('luna.wolin.id');
+    expect(sandbox.session.oidcIssuer).toBe('https://auth.wolin.id');
     expect(sandbox.session.tokenType).toBe('DPoP');
     expect(sanitizeHttpAssetUrl('http://insecure.example.com/avatar.glb')).toBeUndefined();
     expect(sanitizeHttpAssetUrl('https://cdn.wolin.id/avatar.glb')).toBe(
       'https://cdn.wolin.id/avatar.glb',
     );
+
+    // Verify 302 signed asset redirect strips Authorization and DPoP headers
+    let hopCount = 0;
+    const podClient = new WolinClient({
+      podUrl: 'https://alice.wolin.id/',
+      accessToken: 'secret-tok',
+      tokenType: 'DPoP',
+      dpopKeyPair: keyPair,
+      fetchFn: async (_input: RequestInfo | URL, init?: RequestInit) => {
+        hopCount += 1;
+        const h = new Headers(init?.headers);
+        if (hopCount === 1) {
+          expect(h.get('Authorization')).toBe('DPoP secret-tok');
+          expect(h.get('DPoP')).toBeTruthy();
+          return new Response(null, {
+            status: 302,
+            headers: {
+              Location: 'https://auth.wolin.id/assets/alice/avatar.glb?exp=1893456000&sig=' + 'c'.repeat(64),
+            },
+          });
+        }
+        expect(h.get('Authorization')).toBeNull();
+        expect(h.get('DPoP')).toBeNull();
+        return new Response(new Uint8Array([1, 2, 3, 4]), {
+          status: 200,
+          headers: { 'Content-Type': 'model/gltf-binary' },
+        });
+      },
+    });
+    const glbBlob = await podClient.getBlob('/avatar.glb');
+    expect(glbBlob.type).toBe('model/gltf-binary');
+    expect(glbBlob.size).toBe(4);
+    expect(hopCount).toBe(2);
   });
 
   it('Block 2: parses YouTube Live and CHZZK Live broadcast URLs safely', () => {

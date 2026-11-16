@@ -2,7 +2,7 @@
   "name": "@wolin-id/metaverse-starter",
   "version": "0.1.0",
   "private": true,
-  "description": "Wolin Metaverse Starter — 4 Sovereign 3D Lego Blocks (Solid-OIDC Passwordless Auth + Avatar, YouTube/CHZZK Media Stage + P2P Voice, Zero-PII 3D Spatial AdSlot, Client ID Document) on React 19, Vite 6, and React Three Fiber.",
+  "description": "Wolin (月印千江) Metaverse Starter — 4 Sovereign 3D Lego Blocks (Solid-OIDC Passwordless Auth + Avatar, YouTube/CHZZK Media Stage + P2P Voice, Zero-PII 3D Spatial AdSlot, Client ID Document) on React 19, Vite 6, and React Three Fiber.",
   "type": "module",
   "license": "MIT OR Apache-2.0",
   "scripts": {
