@@ -930,24 +930,36 @@ export interface SandboxPassportPreset {
   displayName: string;
   passportTheme: string;
   avatarGlbUrl?: string;
+  passportUrl?: string;
+  worldLinks?: readonly string[];
 }
 
+export const JARVIS_PASSPORT_PRESET: SandboxPassportPreset = {
+  handle: 'jarvis',
+  displayName: 'Jarvis',
+  passportTheme: 'bodhi-gold',
+  passportUrl: 'https://auth.wolin.id/passport/jarvis',
+  worldLinks: ['https://auth.wolin.id/passport/jarvis'],
+};
+
+const LUNA_SANDBOX_PRESET: SandboxPassportPreset = {
+  handle: 'luna',
+  displayName: 'Luna Choi',
+  passportTheme: 'lunar-mercury',
+  passportUrl: 'https://auth.wolin.id/passport/luna',
+  worldLinks: ['https://plaza.wolin.id/'],
+};
+
 export const SANDBOX_PASSPORT_PRESETS: readonly SandboxPassportPreset[] = [
+  JARVIS_PASSPORT_PRESET,
   {
-    handle: 'luna',
-    displayName: 'Luna Choi',
-    passportTheme: 'lunar-mercury',
-  },
-  {
-    handle: 'sora',
-    displayName: 'Sora Kang',
+    handle: 'cyc',
+    displayName: 'CYC',
     passportTheme: 'obsidian-cyan',
+    passportUrl: 'https://auth.wolin.id/passport/cyc',
+    worldLinks: ['https://cycorld.com/'],
   },
-  {
-    handle: 'nova',
-    displayName: 'Nova Han',
-    passportTheme: 'aurora-violet',
-  },
+  LUNA_SANDBOX_PRESET,
 ] as const;
 
 /**
@@ -955,10 +967,18 @@ export const SANDBOX_PASSPORT_PRESETS: readonly SandboxPassportPreset[] = [
  * and `https://wolin.id/ns#` Turtle profile so local 3D worlds work 100% offline out of the box.
  */
 export async function createSandboxPassportSession(
-  preset: SandboxPassportPreset = SANDBOX_PASSPORT_PRESETS[0]!,
+  preset: SandboxPassportPreset = LUNA_SANDBOX_PRESET,
 ): Promise<{ session: WolinSession; profile: WebIdProfile; sampleTurtle: string }> {
   const webId = `https://${preset.handle}.wolin.id/profile/card#me`;
   const podUrl = `https://${preset.handle}.wolin.id/`;
+  const links =
+    preset.worldLinks && preset.worldLinks.length > 0
+      ? preset.worldLinks
+      : ['https://plaza.wolin.id/'];
+  const worldLinksLine =
+    links.length > 0
+      ? `  wolin:worldLinks ${links.map((u) => `<${u}>`).join(', ')} ;`
+      : '';
   const sampleTurtle = [
     '@prefix foaf: <http://xmlns.com/foaf/0.1/> .',
     '@prefix solid: <http://www.w3.org/ns/solid/terms#> .',
@@ -971,7 +991,7 @@ export async function createSandboxPassportSession(
     `  pim:storage <${podUrl}> ;`,
     preset.avatarGlbUrl ? `  wolin:avatarGlbUrl <${preset.avatarGlbUrl}> ;` : '',
     `  wolin:passportTheme "${preset.passportTheme}" ;`,
-    `  wolin:worldLinks <https://plaza.wolin.id/> ;`,
+    worldLinksLine,
     `  wolin:wearableItem "crescent-halo-mk1" .`,
   ]
     .filter(Boolean)

@@ -1,11 +1,15 @@
 :root {
   color-scheme: dark;
-  --bg-obsidian: #060911;
-  --panel-bg: rgba(11, 16, 29, 0.84);
-  --panel-border: rgba(148, 163, 184, 0.2);
+  --bg-obsidian: #060913;
+  --glass-bg: rgba(9, 14, 28, 0.68);
+  --glass-bg-strong: rgba(8, 13, 26, 0.84);
+  --glass-border: rgba(186, 230, 253, 0.18);
+  --glass-border-bright: rgba(254, 240, 138, 0.48);
   --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --accent-cyan: #38bdf8;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --accent-lunar: #fde68a;
+  --accent-cyan: #7dd3fc;
   --accent-emerald: #34d399;
   --accent-amber: #f59e0b;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -21,6 +25,7 @@ body,
   margin: 0;
   padding: 0;
   width: 100%;
+  max-width: 100vw;
   height: 100%;
   overflow: hidden;
   background: var(--bg-obsidian);
@@ -28,6 +33,16 @@ body,
   touch-action: none;
   overscroll-behavior: none;
   user-select: none;
+}
+
+button,
+a {
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  cursor: pointer;
 }
 
 .app-viewport {
@@ -46,55 +61,481 @@ body,
   overflow: hidden;
 }
 
-.hud-dock {
+/* ======================== TOP TRANSLUCENT HUD BAR ======================== */
+.sanctuary-topbar {
   position: absolute;
-  top: 16px;
-  left: 16px;
+  top: max(12px, env(safe-area-inset-top, 12px));
+  left: 12px;
+  right: 12px;
+  z-index: 9996;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.sanctuary-brand-pill {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.36);
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.sanctuary-moon-glyph {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fffef7, #fde68a 68%, #f59e0b);
+  box-shadow: 0 0 12px rgba(253, 230, 138, 0.85);
+  flex-shrink: 0;
+}
+
+.sanctuary-brand-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #f8fafc;
+  white-space: nowrap;
+}
+
+.sanctuary-brand-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding-left: 8px;
+  border-left: 1px solid rgba(148, 163, 184, 0.25);
+  white-space: nowrap;
+}
+
+.sanctuary-top-right {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.sanctuary-audio-pill {
+  min-height: 44px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(253, 230, 138, 0.14);
+  border: 1px solid rgba(253, 230, 138, 0.42);
+  color: var(--accent-lunar);
+  font-size: 11.5px;
+  font-weight: 600;
+  backdrop-filter: blur(14px);
+  white-space: nowrap;
+}
+
+.sanctuary-audio-pill.muted {
+  background: var(--glass-bg);
+  border-color: var(--glass-border);
+  color: var(--text-muted);
+}
+
+.explorer-chip-anchor {
+  position: relative;
+  min-width: 0;
+}
+
+.explorer-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  max-width: min(240px, 52vw);
+  padding: 6px 13px;
+  border-radius: 999px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.36);
+}
+
+.explorer-chip-btn:hover {
+  border-color: rgba(253, 230, 138, 0.42);
+}
+
+.explorer-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-lunar);
+  box-shadow: 0 0 8px rgba(253, 230, 138, 0.75);
+  flex-shrink: 0;
+}
+
+.explorer-status-dot[data-guest='true'] {
+  background: var(--text-muted);
+  box-shadow: none;
+}
+
+.explorer-chip-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ======================== EXPLORER POPOVER ======================== */
+.glass-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(290px, calc(100vw - 24px));
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
   z-index: 9999;
-  width: min(360px, calc(100vw - 32px));
-  max-height: calc(100vh - 32px);
+}
+
+.popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.popover-ext-link {
+  color: var(--accent-lunar);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.explorer-preset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.explorer-preset-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.65);
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.explorer-preset-item span {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.explorer-preset-item.active {
+  border-color: var(--glass-border-bright);
+  background: rgba(253, 230, 138, 0.12);
+}
+
+.full-width-btn {
+  width: 100%;
+  min-height: 44px;
+}
+
+/* ======================== BOTTOM FLOATING DOCK ======================== */
+.sanctuary-bottom-dock {
+  position: absolute;
+  bottom: max(12px, env(safe-area-inset-bottom, 12px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9995;
+  width: min(560px, calc(100vw - 16px));
+  padding: 6px;
+  border-radius: 20px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.48);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.dock-action-btn {
+  min-height: 46px;
+  min-width: 0;
+  padding: 6px 6px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  background: rgba(15, 23, 42, 0.48);
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.dock-action-btn:hover {
+  background: rgba(30, 41, 59, 0.72);
+  border-color: rgba(186, 230, 253, 0.25);
+}
+
+.dock-action-btn.active {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: rgba(125, 211, 252, 0.5);
+  color: #e0f2fe;
+}
+
+.dock-action-btn.active-gold {
+  background: rgba(253, 230, 138, 0.18);
+  border-color: rgba(253, 230, 138, 0.58);
+  color: var(--accent-lunar);
+}
+
+.dock-btn-en {
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.dock-btn-ko {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.dock-action-btn.active-gold .dock-btn-ko {
+  color: #fef08a;
+}
+
+/* ======================== PORTAL PREVIEW CARD ======================== */
+.portal-preview-card {
+  position: absolute;
+  bottom: calc(max(12px, env(safe-area-inset-bottom, 12px)) + 68px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9997;
+  width: min(390px, calc(100vw - 20px));
+  padding: 16px;
+  border-radius: 18px;
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border: 1px solid rgba(253, 230, 138, 0.34);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.58);
+  pointer-events: auto;
+}
+
+.portal-preview-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.portal-code-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--accent-lunar);
+  background: rgba(253, 230, 138, 0.1);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.portal-kind-tag {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.portal-preview-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.portal-preview-sub {
+  margin: 3px 0 8px;
+  font-size: 12px;
+  color: var(--accent-cyan);
+}
+
+.portal-preview-desc {
+  margin: 0 0 14px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.portal-preview-actions {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 8px;
+}
+
+.portal-enter-btn,
+.portal-stay-btn {
+  min-height: 44px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.portal-enter-btn {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #090d16;
+  border: none;
+}
+
+.portal-stay-btn {
+  background: rgba(30, 41, 59, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: var(--text-primary);
+}
+
+/* ======================== PORTALS TRAY & BLOCKS DRAWER ======================== */
+.glass-sheet {
+  position: absolute;
+  bottom: calc(max(12px, env(safe-area-inset-bottom, 12px)) + 68px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9998;
+  width: min(440px, calc(100vw - 20px));
+  max-height: calc(100vh - 150px);
   overflow-y: auto;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.62);
   display: flex;
   flex-direction: column;
   gap: 10px;
   pointer-events: auto;
 }
 
-.hud-brand,
-.hud-card {
-  background: var(--panel-bg);
-  backdrop-filter: blur(14px);
-  border: 1px solid var(--panel-border);
-  border-radius: 14px;
-  padding: 12px 14px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.42);
-}
-
-.hud-brand {
+.sheet-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
 }
 
-.hud-header-actions {
+.sheet-header strong {
+  display: block;
+  font-size: 13.5px;
+}
+
+.sheet-header p {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.sheet-close-btn {
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(30, 41, 59, 0.65);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.portal-list-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.portal-list-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.62);
+  color: var(--text-primary);
+  text-align: left;
+}
+
+.portal-list-item.active {
+  border-color: var(--glass-border-bright);
+  background: rgba(253, 230, 138, 0.12);
+}
+
+.portal-list-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.portal-list-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.portal-list-meta strong {
+  font-size: 12.5px;
+}
+
+.portal-list-meta small {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ======================== LEGO BLOCKS CARDS INSIDE DRAWER ======================== */
+.hud-card {
+  background: rgba(15, 23, 42, 0.62);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 13px;
+  padding: 11px 12px;
+}
+
+.hud-header-actions,
+.inline-chip-group {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
-}
-
-.hud-brand h1 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-.hud-brand p {
-  margin: 3px 0 0;
-  font-size: 11.5px;
-  color: var(--text-secondary);
 }
 
 .hud-badge,
@@ -106,9 +547,9 @@ body,
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  background: rgba(56, 189, 248, 0.14);
+  background: rgba(125, 211, 252, 0.14);
   color: var(--accent-cyan);
-  border: 1px solid rgba(56, 189, 248, 0.28);
+  border: 1px solid rgba(125, 211, 252, 0.28);
   text-decoration: none;
   white-space: nowrap;
 }
@@ -131,13 +572,13 @@ body,
   margin: 0;
   font-size: 12px;
   line-height: 1.45;
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 
 .hud-status {
   margin: 8px 0 0;
   font-size: 11.5px;
-  color: var(--accent-cyan);
+  color: var(--accent-lunar);
 }
 
 .passport-pill {
@@ -158,8 +599,8 @@ body,
   place-items: center;
   font-weight: 700;
   font-size: 15px;
-  background: linear-gradient(135deg, #38bdf8, #6366f1);
-  color: #060911;
+  background: linear-gradient(135deg, #fde68a, #38bdf8);
+  color: #060913;
 }
 
 .passport-meta {
@@ -174,11 +615,12 @@ body,
 
 .passport-meta span {
   font-size: 11.5px;
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 
 .preset-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
@@ -190,33 +632,27 @@ body,
 .inline-form input {
   flex: 1;
   min-width: 0;
-  padding: 7px 10px;
+  padding: 8px 10px;
   border-radius: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: rgba(9, 14, 28, 0.9);
   color: var(--text-primary);
   font-size: 12px;
   user-select: text;
 }
 
 .inline-form input::placeholder {
-  color: #cbd5e1;
-  opacity: 0.78;
-}
-
-button {
-  cursor: pointer;
-  font-family: inherit;
+  color: #94a3b8;
 }
 
 .primary-btn {
-  padding: 8px 12px;
-  border-radius: 9px;
+  padding: 9px 12px;
+  border-radius: 10px;
   border: none;
   font-size: 12.5px;
-  font-weight: 600;
-  background: linear-gradient(135deg, #e2e8f0, #94a3b8);
-  color: #060911;
+  font-weight: 700;
+  background: linear-gradient(135deg, #fef3c7, #bae6fd);
+  color: #060913;
 }
 
 .secondary-btn,
@@ -242,7 +678,7 @@ button {
 .hud-link-btn {
   background: transparent;
   border: none;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   font-size: 11.5px;
   padding: 2px 4px;
 }
@@ -263,24 +699,86 @@ button {
   color: var(--accent-emerald);
 }
 
+/* ======================== 3D WORLD FLOATING LABELS ======================== */
+.portal-labels-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.projected-portal-pin {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.moon-portal-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: rgba(7, 12, 26, 0.78);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(226, 232, 240, 0.24);
+  color: #f8fafc;
+  white-space: nowrap;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  transition: transform 0.16s ease, border-color 0.16s ease;
+}
+
+.moon-portal-label:hover,
+.moon-portal-label.selected {
+  border-color: rgba(253, 230, 138, 0.78);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.52), 0 0 14px rgba(253, 230, 138, 0.22);
+}
+
+.moon-portal-orb {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.moon-portal-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+}
+
+.moon-portal-text strong {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.moon-portal-text small {
+  font-size: 9.5px;
+  color: #cbd5e1;
+}
+
 /* 3D Overhead Avatar Nameplate */
 .wolin-avatar-tag {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 10px;
+  gap: 7px;
+  padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(9, 13, 22, 0.86);
-  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(8, 13, 26, 0.82);
+  border: 1px solid rgba(253, 230, 138, 0.32);
   white-space: nowrap;
   pointer-events: none;
 }
 
 .wolin-avatar-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: var(--accent-emerald);
+  background: var(--accent-lunar);
 }
 
 .wolin-avatar-dot[data-guest='true'] {
@@ -288,13 +786,13 @@ button {
 }
 
 .wolin-avatar-name {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
 }
 
 .wolin-avatar-handle {
-  font-size: 10px;
-  color: var(--text-secondary);
+  font-size: 9.5px;
+  color: var(--text-muted);
 }
 
 /* 3D Media Stage Screen */
@@ -346,7 +844,7 @@ button {
 
 .stage-sub {
   font-size: 11px;
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 
 .stage-actions {
@@ -377,7 +875,7 @@ button {
   padding: 20px;
   text-align: center;
   font-size: 12.5px;
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 
 /* 3D AdSlot Viewability Pill */
@@ -404,4 +902,52 @@ button {
 .ad-telemetry-pill[data-occluded='true'] {
   border-color: var(--accent-amber);
   color: var(--accent-amber);
+}
+
+/* Responsive Mobile Refinement (390px viewport, 0px overflow) */
+@media (max-width: 600px) {
+  .sanctuary-brand-sub {
+    display: none;
+  }
+
+  .sanctuary-topbar {
+    left: 8px;
+    right: 8px;
+    gap: 6px;
+  }
+
+  .sanctuary-brand-pill {
+    padding: 6px 10px;
+  }
+
+  .sanctuary-brand-title {
+    font-size: 12px;
+  }
+
+  .explorer-chip-btn {
+    padding: 6px 10px;
+    font-size: 11.5px;
+    max-width: 196px;
+  }
+
+  .dock-btn-en {
+    font-size: 10.5px;
+  }
+
+  .dock-btn-ko {
+    font-size: 9.5px;
+  }
+
+  .moon-portal-label {
+    padding: 4px 8px;
+    gap: 5px;
+  }
+
+  .moon-portal-text strong {
+    font-size: 10px;
+  }
+
+  .moon-portal-text small {
+    display: none;
+  }
 }
