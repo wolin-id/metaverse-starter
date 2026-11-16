@@ -148,8 +148,8 @@ export function buildSanctuaryPortals(
       description: 'Personal sovereign world portal linked directly from your Wolin Pod.',
       url: sanitized,
       position: [slot[0], slot[1], slot[2]],
-      accentColor: '#99f6e4',
-      glowColor: '#2dd4bf',
+      accentColor: '#10B981',
+      glowColor: '#059669',
       isCustomPodLink: true,
     });
     dynamicIdx += 1;

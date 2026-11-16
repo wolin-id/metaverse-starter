@@ -1,5 +1,6 @@
 import { Canvas } from '@react-three/fiber';
 import {
+  type FormEvent,
   type ReactElement,
   useCallback,
   useEffect,
@@ -20,12 +21,19 @@ import {
   createMeditationAudioController,
   type MeditationAudioController,
 } from './scene/meditationAudio';
-import { PortalScreenProjector } from './scene/ProjectedHtmlOverlay';
+import {
+  LanternPinsProjector,
+  LanternWishScreenProjector,
+  PortalScreenProjector,
+} from './scene/ProjectedHtmlOverlay';
 import {
   createDriftingLotusLantern,
+  DEFAULT_POETIC_WISHES,
   INITIAL_LOTUS_LANTERNS,
   type LotusLanternItem,
+  MAX_LANTERN_WISH_LENGTH,
   type SanctuaryCameraMode,
+  type SanctuaryMood,
   WolinSanctuary,
 } from './scene/WolinSanctuary';
 import { SANDBOX_PASSPORT_PRESETS } from './wolin/client';
@@ -47,15 +55,26 @@ function SanctuaryExperience(): ReactElement {
     [session?.worldLinks],
   );
 
+  const [mood, setMood] = useState<SanctuaryMood>('night');
   const [selectedPortal, setSelectedPortal] = useState<SanctuaryPortal | null>(null);
   const [portalPulseMap, setPortalPulseMap] = useState<Record<string, number>>({});
   const portalLabelRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  // Wish-Bearing Lotus Lanterns State
   const [lanterns, setLanterns] = useState<LotusLanternItem[]>(() => [
     ...INITIAL_LOTUS_LANTERNS,
   ]);
+  const [selectedLanternId, setSelectedLanternId] = useState<string | null>(null);
+  const [wishComposerOpen, setWishComposerOpen] = useState<boolean>(false);
+  const [wishDraft, setWishDraft] = useState<string>('');
+  const wishBubbleRef = useRef<HTMLDivElement | null>(null);
+  const lanternPinRefs = useRef<Record<string, HTMLElement | null>>({});
+  const r3fClockRef = useRef<{ getElapsedTime: () => number } | null>(null);
   const lanternSeqRef = useRef<number>(INITIAL_LOTUS_LANTERNS.length + 1);
+
   const avatarPosRef = useRef<[number, number]>([1.05, 4.85]);
   const [walkTarget, setWalkTarget] = useState<[number, number] | null>(null);
+  const [walkTargetNonce, setWalkTargetNonce] = useState<number>(0);
 
   const [cameraMode, setCameraMode] = useState<SanctuaryCameraMode>('explore');
   const [cameraModeNonce, setCameraModeNonce] = useState<number>(0);
@@ -77,6 +96,11 @@ function SanctuaryExperience(): ReactElement {
   const [showOccluderWall, setShowOccluderWall] = useState<boolean>(false);
   const [impressions, setImpressions] = useState<ViewableImpressionPayload[]>([]);
 
+  const selectedLantern = useMemo(
+    () => lanterns.find((item) => item.id === selectedLanternId) ?? null,
+    [lanterns, selectedLanternId],
+  );
+
   useEffect(() => {
     const ctrl = createMeditationAudioController();
     audioRef.current = ctrl;
@@ -96,6 +120,7 @@ function SanctuaryExperience(): ReactElement {
       [portal.id]: performance.now(),
     }));
     setSelectedPortal(portal);
+    setWishComposerOpen(false);
     setPortalsTrayOpen(false);
     setExplorerMenuOpen(false);
   }, []);
@@ -103,6 +128,7 @@ function SanctuaryExperience(): ReactElement {
   const handleWalkAndPreviewPortal = useCallback(
     (portal: SanctuaryPortal) => {
       setWalkTarget([portal.position[0], portal.position[2]]);
+      setWalkTargetNonce((n) => n + 1);
       handleSelectPortal(portal);
     },
     [handleSelectPortal],
@@ -112,6 +138,7 @@ function SanctuaryExperience(): ReactElement {
     setExplorerMenuOpen(false);
     setPortalsTrayOpen(false);
     setBlocksDrawerOpen(false);
+    setWishComposerOpen(false);
 
     setCameraMode((prev) => {
       const next = prev === 'meditate' ? 'explore' : 'meditate';
@@ -134,15 +161,55 @@ function SanctuaryExperience(): ReactElement {
     });
   }, []);
 
-  const handleFloatLantern = useCallback(() => {
-    const seq = lanternSeqRef.current++;
-    const nowSec = performance.now() / 1000;
-    const spawned = createDriftingLotusLantern(seq, avatarPosRef.current, nowSec);
-    setLanterns((prev) => [...prev.slice(-(MAX_FLOATING_LANTERNS - 1)), spawned]);
+  const handleToggleMood = useCallback(() => {
+    setMood((prev) => (prev === 'night' ? 'dawn' : 'night'));
+  }, []);
+
+  const handleOpenWishComposer = useCallback(() => {
+    setWishComposerOpen((prev) => !prev);
+    setPortalsTrayOpen(false);
+    setBlocksDrawerOpen(false);
+    setExplorerMenuOpen(false);
+    setSelectedPortal(null);
+  }, []);
+
+  const spawnWishLantern = useCallback(
+    (rawWish?: string) => {
+      const seq = lanternSeqRef.current++;
+      const nowSec = r3fClockRef.current ? r3fClockRef.current.getElapsedTime() : 0;
+      const authorHandle = session?.handle ?? 'guest.wolin.id';
+      const spawned = createDriftingLotusLantern(seq, avatarPosRef.current, nowSec, {
+        wish: rawWish,
+        authorHandle,
+      });
+      setLanterns((prev) => [...prev.slice(-(MAX_FLOATING_LANTERNS - 1)), spawned]);
+      setSelectedLanternId(spawned.id);
+      setWishDraft('');
+      setWishComposerOpen(false);
+    },
+    [session?.handle],
+  );
+
+  const handleWishFormSubmit = useCallback(
+    (e: FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      spawnWishLantern(wishDraft);
+    },
+    [spawnWishLantern, wishDraft],
+  );
+
+  const handleSelectLantern = useCallback((lantern: LotusLanternItem) => {
+    setSelectedLanternId(lantern.id);
+    setWishComposerOpen(false);
+    setPortalsTrayOpen(false);
+    setBlocksDrawerOpen(false);
+    setExplorerMenuOpen(false);
+    setSelectedPortal(null);
   }, []);
 
   const handleLakeWalkTarget = useCallback((xz: [number, number]) => {
     setWalkTarget(xz);
+    setWalkTargetNonce((n) => n + 1);
   }, []);
 
   const handleAvatarPositionChange = useCallback((xz: [number, number]) => {
@@ -154,9 +221,10 @@ function SanctuaryExperience(): ReactElement {
     : 'Guest · wolin.id';
 
   const isMeditating = cameraMode === 'meditate';
+  const wishCharCount = Array.from(wishDraft).length;
 
   return (
-    <div className="app-viewport">
+    <div className="app-viewport" data-mood={mood}>
       {/* Isolated 3D Stacking Context so HTML markers never pierce top HUD */}
       <div className="canvas-layer">
         <Canvas
@@ -164,18 +232,25 @@ function SanctuaryExperience(): ReactElement {
           gl={{ preserveDrawingBuffer: true, antialias: true }}
           camera={{ position: [0, 3.15, 13.4], fov: 47, near: 0.1, far: 260 }}
           dpr={[1, 2]}
+          onCreated={({ clock }) => {
+            r3fClockRef.current = clock;
+          }}
         >
           <WolinSanctuary
             portals={portals}
             selectedPortalId={selectedPortal?.id ?? null}
             portalPulseMap={portalPulseMap}
             lanterns={lanterns}
+            selectedLanternId={selectedLantern?.id ?? null}
+            mood={mood}
             cameraMode={cameraMode}
             cameraModeNonce={cameraModeNonce}
             walkTarget={walkTarget}
+            walkTargetNonce={walkTargetNonce}
             onLakeWalkTarget={handleLakeWalkTarget}
             onAvatarPositionChange={handleAvatarPositionChange}
             onSelectPortal={handleSelectPortal}
+            onSelectLantern={handleSelectLantern}
           >
             {/* Lego Block #2: Optional 3D YouTube / CHZZK Stage Screen + WebRTC P2P Voice */}
             {showMediaStage && (
@@ -221,8 +296,37 @@ function SanctuaryExperience(): ReactElement {
               yOffset={1.26}
               edgePaddingPx={8}
             />
+
+            <LanternPinsProjector
+              lanterns={lanterns}
+              pinRefs={lanternPinRefs}
+              hidden={isMeditating}
+            />
+
+            <LanternWishScreenProjector
+              lantern={selectedLantern}
+              bubbleRef={wishBubbleRef}
+              yOffset={0.45}
+              edgePaddingPx={10}
+            />
           </WolinSanctuary>
         </Canvas>
+
+        {/* Accessible >=44x44px Projected Hit Targets for Drifting Lotus Lanterns */}
+        <div className="lantern-pins-layer" aria-label="Drifting Wish Lanterns">
+          {lanterns.map((item) => (
+            <button
+              key={item.id}
+              ref={(el) => {
+                lanternPinRefs.current[item.id] = el;
+              }}
+              type="button"
+              className="projected-lantern-pin"
+              aria-label={`Read lotus lantern wish from ${item.authorHandle}`}
+              onClick={() => handleSelectLantern(item)}
+            />
+          ))}
+        </div>
 
         {/* Crisp 1:1 DPI Projected Moon Portal Labels (trapped inside .canvas-layer stacking context) */}
         <div className="portal-labels-layer" aria-label="Salt Lake Moon Portal Markers">
@@ -255,6 +359,33 @@ function SanctuaryExperience(): ReactElement {
             );
           })}
         </div>
+
+        {/* Floating Wish Bubble for Selected Drifting Lotus Lantern (`소원 읽기`) */}
+        {selectedLantern && (
+          <div
+            ref={wishBubbleRef}
+            className="lantern-wish-bubble"
+            role="status"
+            aria-live="polite"
+            aria-label="Lotus Lantern Wish"
+          >
+            <div className="lantern-wish-bubble-top">
+              <span className="lantern-wish-author">
+                <span className="lantern-wish-dot" aria-hidden="true" />
+                {selectedLantern.authorHandle}
+              </span>
+              <button
+                type="button"
+                className="lantern-wish-dismiss"
+                onClick={() => setSelectedLanternId(null)}
+                aria-label="Dismiss lantern wish"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="lantern-wish-quote">“{selectedLantern.wish}”</p>
+          </div>
+        )}
       </div>
 
       {/* Minimal Top Translucent Bar */}
@@ -273,9 +404,28 @@ function SanctuaryExperience(): ReactElement {
               onClick={handleToggleAudioMute}
               aria-label={audioMuted ? 'Unmute singing bowl chime' : 'Mute singing bowl chime'}
             >
-              {audioMuted ? '🔇 Muted' : '🔊 Bowl'}
+              <span aria-hidden="true">{audioMuted ? '🔇' : '🔊'}</span>
+              <span className="audio-pill-label">{audioMuted ? 'Muted' : 'Bowl'}</span>
             </button>
           )}
+
+          <button
+            type="button"
+            className={`sanctuary-mood-pill mood-${mood}`}
+            onClick={handleToggleMood}
+            aria-pressed={mood === 'dawn'}
+            aria-label={
+              mood === 'night'
+                ? 'Switch sanctuary mood to Dawn (currently Night)'
+                : 'Switch sanctuary mood to Night (currently Dawn)'
+            }
+          >
+            <span className={`mood-seg ${mood === 'night' ? 'active' : ''}`}>🌙 Night</span>
+            <span className="mood-sep" aria-hidden="true">
+              /
+            </span>
+            <span className={`mood-seg ${mood === 'dawn' ? 'active' : ''}`}>🌅 Dawn</span>
+          </button>
 
           <div className="explorer-chip-anchor">
             <button
@@ -285,6 +435,7 @@ function SanctuaryExperience(): ReactElement {
               onClick={() => {
                 setExplorerMenuOpen((v) => !v);
                 setPortalsTrayOpen(false);
+                setWishComposerOpen(false);
               }}
             >
               <span
@@ -295,7 +446,11 @@ function SanctuaryExperience(): ReactElement {
             </button>
 
             {explorerMenuOpen && (
-              <div className="glass-popover explorer-popover" role="dialog" aria-label="Switch Wolin Explorer">
+              <div
+                className="glass-popover explorer-popover"
+                role="dialog"
+                aria-label="Switch Wolin Explorer"
+              >
                 <div className="popover-header">
                   <span>Active Sovereign Explorer</span>
                   <a
@@ -383,6 +538,63 @@ function SanctuaryExperience(): ReactElement {
               Stay
             </button>
           </div>
+        </section>
+      )}
+
+      {/* Wish-Bearing Lotus Lantern Composer (`연등 띄우기`) */}
+      {wishComposerOpen && (
+        <section
+          className="glass-sheet lantern-wish-popover"
+          role="dialog"
+          aria-label="Float a Wish Lantern"
+        >
+          <div className="sheet-header">
+            <div>
+              <strong>연등 띄우기 · Float a Wish Lantern</strong>
+              <p>Release a glowing lotus wish across the mirror salt lake, or tap any lantern to read.</p>
+            </div>
+            <button
+              type="button"
+              className="sheet-close-btn"
+              onClick={() => setWishComposerOpen(false)}
+              aria-label="Close Wish Lantern Composer"
+            >
+              ✕
+            </button>
+          </div>
+
+          <form className="wish-composer-form" onSubmit={handleWishFormSubmit}>
+            <div className="wish-input-wrap">
+              <input
+                type="text"
+                maxLength={MAX_LANTERN_WISH_LENGTH}
+                value={wishDraft}
+                onChange={(e) => setWishDraft(e.target.value)}
+                placeholder={DEFAULT_POETIC_WISHES[0]}
+                aria-label="Write a 1-line wish for your lotus lantern"
+              />
+              <span className="wish-char-count" aria-hidden="true">
+                {wishCharCount}/{MAX_LANTERN_WISH_LENGTH}
+              </span>
+            </div>
+
+            <div className="wish-preset-row" aria-label="Poetic wish suggestions">
+              {DEFAULT_POETIC_WISHES.slice(0, 3).map((poeticWish, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  className="wish-preset-chip"
+                  onClick={() => setWishDraft(poeticWish)}
+                >
+                  {poeticWish}
+                </button>
+              ))}
+            </div>
+
+            <button type="submit" className="primary-btn full-width-btn">
+              Release Wish Lantern · 연등 띄우기
+            </button>
+          </form>
         </section>
       )}
 
@@ -578,6 +790,12 @@ function SanctuaryExperience(): ReactElement {
         </aside>
       )}
 
+      {/* Subtle Desktop Control Hint (`하늘정원` pattern — hidden cleanly on <768px) */}
+      <div className="sanctuary-control-hint" aria-label="Sanctuary Navigation Controls">
+        <span className="control-hint-dot" aria-hidden="true" />
+        <span>WASD · Click lake to walk · Drag to orbit</span>
+      </div>
+
       {/* Bottom Floating Contemplative Action Dock (>=44px touch targets, 0px overflow on 390px) */}
       <nav className="sanctuary-bottom-dock" aria-label="Sanctuary Contemplative Actions">
         <button
@@ -592,8 +810,9 @@ function SanctuaryExperience(): ReactElement {
 
         <button
           type="button"
-          className="dock-action-btn"
-          onClick={handleFloatLantern}
+          className={`dock-action-btn ${wishComposerOpen ? 'active' : ''}`}
+          aria-expanded={wishComposerOpen}
+          onClick={handleOpenWishComposer}
         >
           <span className="dock-btn-en">Float Lantern</span>
           <span className="dock-btn-ko">연등 ({lanterns.length})</span>
@@ -607,6 +826,7 @@ function SanctuaryExperience(): ReactElement {
             setPortalsTrayOpen((v) => !v);
             setBlocksDrawerOpen(false);
             setExplorerMenuOpen(false);
+            setWishComposerOpen(false);
           }}
         >
           <span className="dock-btn-en">Portals ({portals.length})</span>
@@ -621,6 +841,7 @@ function SanctuaryExperience(): ReactElement {
             setBlocksDrawerOpen((v) => !v);
             setPortalsTrayOpen(false);
             setExplorerMenuOpen(false);
+            setWishComposerOpen(false);
           }}
         >
           <span className="dock-btn-en">Blocks ▾</span>
