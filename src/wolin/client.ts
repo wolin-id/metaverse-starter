@@ -1,11 +1,12 @@
 /**
- * Self-contained Wolin Sovereign Pod & Metaverse Client (`@wolin-id/client`-compatible).
+ * Self-contained Wolin (月印千江) Sovereign Pod & Metaverse Client (`@wolin-id/client`-compatible).
  *
  * Implements:
- * - RFC 7636 PKCE (`S256`) & Solid-OIDC Discovery + Authorization Code Exchange
+ * - RFC 7636 PKCE (`S256`) & Solid-OIDC Discovery + Authorization Code Exchange (`https://auth.wolin.id`)
  * - RFC 9449 ES256 (`P-256`) DPoP Keypair Generation, JWK Thumbprint (`jkt`), Proof Signing & Nonce Retry
  * - W3C WebID Turtle Profile Parsing + Official `https://wolin.id/ns#` Metaverse Vocabulary Discovery
- * - Authenticated `WolinPodClient` for Solid LDP Resource GET/PUT
+ * - Tenant `pod_id` Handle Validation (`isValidPodId`, `validatePodId`)
+ * - Authenticated `WolinPodClient` (`WolinClient`) with credential-safe `302` signed asset redirect handling
  * - Offline-capable Sandbox Passport helper for zero-config local 3D world prototyping
  */
 
@@ -23,8 +24,48 @@ export const FOAF_NAME_IRI = 'http://xmlns.com/foaf/0.1/name';
 export const VCARD_FN_IRI = 'http://www.w3.org/2006/vcard/ns#fn';
 export const RDF_TYPE_IRI = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
 
-export const DEFAULT_WOLIN_ISSUER = 'https://id.wolin.id';
+export const DEFAULT_WOLIN_OIDC_ISSUER = 'https://auth.wolin.id';
+export const DEFAULT_WOLIN_ISSUER = DEFAULT_WOLIN_OIDC_ISSUER;
+export const DEFAULT_WOLIN_POD_BASE_URL = 'https://pod.wolin.id';
+export const DEFAULT_WOLIN_DOMAIN = 'wolin.id';
 export const DEFAULT_SOLID_OIDC_SCOPES = ['openid', 'webid', 'offline_access'] as const;
+
+export const MIN_POD_ID_LEN = 3;
+export const MAX_POD_ID_LEN = 32;
+export const RESERVED_POD_ID_LIST = [
+  'abuse', 'admin', 'administrator', 'ads', 'api', 'app', 'apps', 'assets', 'auth', 'authorize',
+  'autoconfig', 'autodiscover', 'backup', 'beta', 'billing', 'blog', 'calendar', 'cdn', 'chat',
+  'cloud', 'consent', 'console', 'contact', 'control', 'corp', 'dashboard', 'data', 'dev', 'dns',
+  'doc', 'docs', 'download', 'downloads', 'edge', 'email', 'engine', 'enterprise', 'entropy',
+  'events', 'files', 'forum', 'ftp', 'gateway', 'git', 'graphql', 'health', 'healthz', 'help',
+  'home', 'host', 'hostmaster', 'id', 'idp', 'images', 'imap', 'img', 'inbox', 'info', 'internal',
+  'jwks', 'legal', 'local', 'localhost', 'login', 'logout', 'logs', 'mail', 'mailer', 'manage',
+  'mcp', 'media', 'metrics', 'mta-sts', 'mx', 'net', 'news', 'no-reply', 'noreply', 'notify',
+  'ns', 'ns1', 'ns2', 'ns3', 'ns4', 'oauth', 'official', 'oidc', 'ops', 'org', 'origin',
+  'passport', 'pay', 'payment', 'payments', 'pod', 'pods', 'pop', 'pop3', 'portal', 'postmaster',
+  'press', 'pricing', 'private', 'prod', 'production', 'profile', 'proxy', 'pub', 'public',
+  'register', 'registry', 'relay', 'root', 'rpc', 'rss', 'sandbox', 'search', 'secure',
+  'security', 'server', 'service', 'services', 'session', 'settings', 'sftp', 'signin',
+  'signout', 'signup', 'smtp', 'solid', 'sparql', 'ssh', 'sso', 'stage', 'staging', 'static',
+  'stats', 'status', 'storage', 'store', 'support', 'sync', 'sys', 'system', 'team', 'telemetry',
+  'terms', 'test', 'testing', 'token', 'trust', 'updates', 'upload', 'uploads', 'userinfo',
+  'vault', 'verify', 'vpn', 'wac', 'web', 'webhook', 'webhooks', 'webid', 'webmail', 'webmaster',
+  'well-known', 'wolin', 'ws', 'wss', 'www',
+] as const;
+export const RESERVED_POD_IDS: ReadonlySet<string> = new Set(RESERVED_POD_ID_LIST);
+
+export function isReservedPodId(podId: string): boolean {
+  return typeof podId === 'string' && RESERVED_POD_IDS.has(podId);
+}
+
+export function isValidPodId(podId: string, options?: { allowReserved?: boolean }): boolean {
+  if (typeof podId !== 'string') return false;
+  if (podId.length < MIN_POD_ID_LEN || podId.length > MAX_POD_ID_LEN) return false;
+  if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(podId)) return false;
+  if (podId.startsWith('xn--') || podId.includes('--')) return false;
+  if (!options?.allowReserved && RESERVED_POD_IDS.has(podId)) return false;
+  return true;
+}
 
 export class WolinError extends Error {
   readonly code: string;
@@ -524,6 +565,15 @@ export function parseTurtle(turtle: string, baseIri: string): RdfTriple[] {
         u.hash = '';
         return { value: u.toString(), type: 'iri' };
       }
+      if (/^https?:\/\//i.test(inner)) {
+        const abs = new URL(inner);
+        const afterScheme = inner.replace(/^https?:\/\//i, '');
+        const authorityAndRest = afterScheme.split(/[?#]/)[0] ?? '';
+        if (!authorityAndRest.includes('/')) {
+          return { value: `${abs.protocol}//${abs.host}${abs.search}${abs.hash}`, type: 'iri' };
+        }
+        return { value: abs.toString(), type: 'iri' };
+      }
       return { value: new URL(inner, base).toString(), type: 'iri' };
     }
     if (
@@ -774,9 +824,12 @@ export class WolinPodClient {
 
   async fetchAuthenticated(pathOrUrl: string, init: RequestInit = {}): Promise<Response> {
     const targetUrl = this.resolveUrl(pathOrUrl);
+    const initialParsed = new URL(targetUrl);
     const method = (init.method ?? 'GET').toUpperCase();
     const headers = new Headers(init.headers);
     const fetchImpl = this.options.fetchFn ?? ((input, reqInit) => globalThis.fetch(input, reqInit));
+    const canFollowSafely =
+      (init.redirect ?? 'follow') === 'follow' && (method === 'GET' || method === 'HEAD');
 
     if (this.options.accessToken) {
       if (this.options.tokenType === 'DPoP' && this.options.dpopKeyPair) {
@@ -795,9 +848,65 @@ export class WolinPodClient {
       }
     }
 
-    return fetchImpl(targetUrl, { ...init, method, headers });
+    let response = await fetchImpl(targetUrl, {
+      ...init,
+      method,
+      headers,
+      redirect: canFollowSafely && this.options.accessToken ? 'manual' : init.redirect,
+    });
+
+    if (canFollowSafely && response.type === 'opaqueredirect') {
+      return fetchImpl(targetUrl, { ...init, method, headers, redirect: 'follow' });
+    }
+
+    let currentUrl = initialParsed;
+    let hops = 0;
+    while (canFollowSafely && [301, 302, 303, 307, 308].includes(response.status)) {
+      const location = response.headers.get('Location');
+      if (!location || hops >= 5) break;
+      await response.body?.cancel().catch(() => undefined);
+      const nextUrl = new URL(location, currentUrl);
+      if (currentUrl.protocol === 'https:' && nextUrl.protocol !== 'https:') {
+        throw new WolinAuthError('HTTPS Pod request must not downgrade to HTTP via redirect');
+      }
+      const hopHeaders = new Headers(init.headers);
+      hopHeaders.delete('Authorization');
+      hopHeaders.delete('DPoP');
+      hopHeaders.delete('Cookie');
+      response = await fetchImpl(nextUrl.toString(), {
+        ...init,
+        method: response.status === 303 && method !== 'HEAD' ? 'GET' : method,
+        headers: hopHeaders,
+        body: undefined,
+        redirect: 'manual',
+      });
+      currentUrl = nextUrl;
+      hops += 1;
+    }
+
+    return response;
+  }
+
+  async get(pathOrUrl: string, init: RequestInit = {}): Promise<Uint8Array> {
+    const response = await this.fetchAuthenticated(pathOrUrl, { ...init, method: 'GET' });
+    if (!response.ok) {
+      throw new WolinError('HTTP_ERROR', `Pod GET failed with HTTP ${response.status}`);
+    }
+    return new Uint8Array(await response.arrayBuffer());
+  }
+
+  async getBlob(pathOrUrl: string, init: RequestInit = {}): Promise<Blob> {
+    const response = await this.fetchAuthenticated(pathOrUrl, { ...init, method: 'GET' });
+    if (!response.ok) {
+      throw new WolinError('HTTP_ERROR', `Pod GET failed with HTTP ${response.status}`);
+    }
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    const contentType = response.headers.get('Content-Type')?.split(';')[0]?.trim();
+    return new Blob([bytes as BlobPart], { type: contentType || 'application/octet-stream' });
   }
 }
+
+export { WolinPodClient as WolinClient };
 
 /**
  * Resolve the origin-bound Solid-OIDC Client ID Document URL (`<origin>/client-id.jsonld`).

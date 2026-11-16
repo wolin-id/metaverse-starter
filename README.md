@@ -1,6 +1,6 @@
-# Wolin Metaverse Starter (`@wolin-id/metaverse-starter`)
+# Wolin (`月印千江`) Metaverse Starter (`@wolin-id/metaverse-starter`)
 
-> **One Identity. Infinite Reflections.** — Drop-in 3D Metaverse Starter Kit on **React 19 + Vite 6 + TypeScript 5 + Three.js (`@react-three/fiber` & `@react-three/drei`)**.
+> **One Identity. Infinite Reflections. (`月印千江`)** — Drop-in 3D Metaverse Starter Kit on **React 19 + Vite 6 + TypeScript 5 + Three.js (`@react-three/fiber` & `@react-three/drei`)**.
 
 Clone and launch a sovereign 3D spatial web world in under 5 minutes with **zero API keys**, **cross-world `.glb` avatars (`https://wolin.id/ns#`)**, **$0-egress live stage streaming**, and **Zero-PII MRC 3D spatial ads**.
 
